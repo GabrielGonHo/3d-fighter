@@ -16,5 +16,5 @@ hit_level = 0
 hitstun = 14
 hitstop = 5
 knockback = Vector2(1.26, 0)
-hitbox_offset = Vector3(0, 1.4, -0.87359995)
+hitbox_offset = Vector3(0, 1.4, -0.78)
 cancel_into = Array[String](["LP", "HP", "2LP"])

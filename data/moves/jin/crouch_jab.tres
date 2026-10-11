@@ -15,5 +15,5 @@ hitstun = 13
 blockstun = 9
 hitstop = 5
 knockback = Vector2(1.05, 0)
-hitbox_offset = Vector3(-0.1, 0.84, -0.616)
+hitbox_offset = Vector3(-0.1, 0.84, -0.55)
 cancel_into = Array[String](["2LP", "2LK"])

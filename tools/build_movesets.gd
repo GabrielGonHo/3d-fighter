@@ -137,7 +137,7 @@ const CHARACTERS := {
 	},
 	"jin": {
 		startup = 0, damage = 0.95, knockback = 1.05, hitstop = 0,
-		reach = 1.12, # long legs: base moves reach 12% further
+		reach = 1.12, # long legs: base kicks reach 12% further (punches too gave Jin 71% vs Brutus)
 		create = {display_name = "Jin", archetype = "Kicker", select_order = 4,
 			description = "Tae Kwon Do kicker. Controls the space at kick range and punishes anyone who steps in.",
 			model_scene = "res://assets/characters/base/Superhero_Male_FullBody.gltf",
@@ -372,8 +372,8 @@ func _initialize() -> void:
 			move.damage = roundi(move.damage * spec.damage)
 			move.knockback *= spec.knockback
 			move.hitstop = maxi(3, move.hitstop + spec.hitstop)
-			var reach: float = spec.get("reach", 1.0)
-			move.hitbox_offset.z *= reach # longer limbs push the hitbox further out
+			if move.input.ends_with("K"):
+				move.hitbox_offset.z *= spec.get("reach", 1.0) # longer legs push the kicks further out
 			moves.append(_save(move, dir + file + ".tres"))
 		for file: String in spec.signatures:
 			moves.append(_save(_make(spec.signatures[file]), dir + file + ".tres"))
