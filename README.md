@@ -9,7 +9,7 @@ Its signature is a **dynamic action camera** that orbits and dollies in on every
 
 ## Features
 
-- **6 fighters**, each with normals, motion-input specials, a super and a distinct CPU personality (design notes in [docs/characters](docs/characters/README.md)):
+- **7 fighters**, each with normals, motion-input specials, a super and a distinct CPU personality (design notes in [docs/characters](docs/characters/README.md)):
   - **Kenji**: zoner;
   - **Rhea**: rushdown;
   - **Brutus**: punisher;
