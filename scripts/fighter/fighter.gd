@@ -197,6 +197,9 @@ var frozen := false
 var _landing_frames := LANDING_FRAMES
 var sidestep_dir := Vector3.ZERO
 var debug_draw := false
+## This tick's input as the controller gave it, screen-relative (ReplayRecorder saves it;
+## not simulation state: the input buffer holds what the simulation uses).
+var last_screen_input := InputBuffer.pack(InputBuffer.NEUTRAL, 0)
 ## Set by FightManager on the round/match winner: shows the victory pose when idle.
 var victory := false
 ## Match-win animation (played once, final pose held); empty = round-win folded arms.
@@ -350,9 +353,12 @@ func load_state(state: Dictionary) -> void:
 
 func read_input() -> void:
 	if input_locked:
-		input.push(InputBuffer.pack(InputBuffer.NEUTRAL, 0))
+		last_screen_input = InputBuffer.pack(InputBuffer.NEUTRAL, 0)
+		input.push(last_screen_input)
 	else:
-		input.push(controller.read(self))
+		var packed := controller.read(self)
+		last_screen_input = PlayerController.to_screen(packed, self)
+		input.push(packed)
 
 
 func tick() -> void:

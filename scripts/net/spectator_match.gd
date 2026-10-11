@@ -34,6 +34,8 @@ var _leave_prompt: PanelContainer
 var _waiting := 0
 var _last_react := -REACTION_COOLDOWN_MS
 var _smoke_done := false
+## The watched match, saved as a replay once it has played to its end (tests).
+var saved_replay: Replay
 
 
 func setup(fight_manager: Node) -> void:
@@ -65,6 +67,8 @@ func _physics_process(_delta: float) -> void:
 	if ended:
 		return
 	if not _log.end.is_empty() and frame >= int(_log.end.final_tick):
+		if frame == int(_log.end.final_tick) and saved_replay == null:
+			_save_replay()
 		_step(InputBuffer.pack(InputBuffer.NEUTRAL, 0), InputBuffer.pack(InputBuffer.NEUTRAL, 0)) # decided: play out the victory
 		_update_status(0)
 		return
@@ -114,6 +118,19 @@ func _step(p1: int, p2: int) -> void:
 	_controllers[1].raw = p2
 	manager.step()
 	frame += 1
+
+
+## A finished match that played here in full (and in sync) is kept as a replay.
+func _save_replay() -> void:
+	if diverged or not ReplayRecorder.enabled or int(_log.end.get("result", SpectatorFeed.Result.ABORTED)) == SpectatorFeed.Result.ABORTED:
+		return
+	var replay := Replay.from_log(_log, "spectated", GameState.stage_path)
+	if replay:
+		replay.meta.p1_name = "%s  ·  %s" % [manager.fighters[0].data.display_name, _log.start.get("p1_name", "P1")]
+		replay.meta.p2_name = "%s  ·  %s" % [_log.start.get("p2_name", "P2"), manager.fighters[1].data.display_name]
+		if replay.save():
+			saved_replay = replay
+			Replay.prune()
 
 
 func _diverge(mine: int, theirs: int) -> void:

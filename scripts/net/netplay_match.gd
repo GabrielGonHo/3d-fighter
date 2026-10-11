@@ -25,6 +25,12 @@ var _smoke_input := InputBuffer.pack(InputBuffer.NEUTRAL, 0)
 var _smoke_hold := 0
 var _smoke_done := false
 var _publisher: SpectatorFeed.Publisher
+## The replay: a publisher into a local log (confirmed inputs only), saved when the
+## match's result is confirmed. Every online match, LAN or internet.
+var _replay_publisher: SpectatorFeed.Publisher
+var _replay_log := SpectatorFeed.Log.new()
+## The saved replay (tests).
+var saved_replay: Replay
 var _reported := [] # round and wins last sent to the server
 
 
@@ -47,6 +53,7 @@ func setup(fight_manager: Node) -> void:
 	hud.configure_result("Rematch", "Character Select", "Leave")
 	if Net.publishing():
 		_start_publishing(names)
+	_start_replay(names)
 
 
 func _exit_tree() -> void:
@@ -69,6 +76,7 @@ func _physics_process(_delta: float) -> void:
 	Net.peer.send_input(session.make_packet())
 	if _publisher:
 		_publish()
+	_record_replay()
 	_stalled_for = 0 if advanced else _stalled_for + 1
 	if Engine.get_physics_frames() % 10 == 0 or not advanced:
 		_update_status()
@@ -178,6 +186,33 @@ func _publish() -> void:
 		if now != _reported:
 			_reported = now
 			Net.report_room("in_match", {round = now[0], wins = now[1]})
+
+
+func _start_replay(names: Array) -> void:
+	_replay_publisher = SpectatorFeed.Publisher.new(session, func(bytes: PackedByteArray) -> void:
+		_replay_log.add(SpectatorFeed.decode(bytes)))
+	var p1: CharacterData = manager.fighters[0].data
+	var p2: CharacterData = manager.fighters[1].data
+	_replay_publisher.start(0, 0, 0, PackedStringArray([GameState.game_version(), "", p1.id, p2.id,
+		"%s  ·  %s" % [p1.display_name, names[0]], "%s  ·  %s" % [names[1], p2.display_name]]))
+
+
+## Saved once the result is confirmed (a rollback can't change it any more).
+func _record_replay() -> void:
+	if _replay_publisher.ended:
+		return
+	_replay_publisher.update(Time.get_ticks_msec())
+	if manager.phase != manager.Phase.MATCH_OVER or session.prediction_depth() > 0:
+		return
+	var wins: Array = manager.round_wins
+	var result := SpectatorFeed.Result.DRAW
+	if manager.match_winner:
+		result = SpectatorFeed.Result.P1_WON if manager.match_winner == manager.fighters[0] else SpectatorFeed.Result.P2_WON
+	_replay_publisher.finish(result, wins[0], wins[1], Time.get_ticks_msec())
+	var replay := Replay.from_log(_replay_log, "online", GameState.stage_path)
+	if replay and ReplayRecorder.enabled and replay.save():
+		saved_replay = replay
+		Replay.prune()
 
 
 func _finish_feed(result: int) -> void:

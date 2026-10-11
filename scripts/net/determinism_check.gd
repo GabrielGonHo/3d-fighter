@@ -15,6 +15,8 @@ static func run(tree: SceneTree) -> int:
 	var gs: Node = tree.root.get_node("GameState")
 	gs.mode = gs.Mode.VERSUS
 	gs.stage_path = gs.DEFAULT_STAGE
+	var recording := ReplayRecorder.enabled
+	ReplayRecorder.enabled = false # random inputs: not worth keeping as replays
 	var combined := []
 	var roster: Array = gs.roster
 	for i in roster.size():
@@ -65,4 +67,5 @@ static func run(tree: SceneTree) -> int:
 		fight.free()
 	var total := hash(combined) & 0xFFFFFFFF
 	print("SMOKE TEST: determinism combined %08x" % total)
+	ReplayRecorder.enabled = recording
 	return total

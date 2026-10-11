@@ -24,6 +24,7 @@ const CHARACTER_SELECT_SCENE := "res://scenes/character_select.tscn"
 const MAIN_MENU_SCENE := "res://scenes/main_menu.tscn"
 const VS_SCENE := "res://scenes/vs_screen.tscn"
 const ARCADE_END_SCENE := "res://scenes/arcade_end.tscn"
+const REPLAYS_SCENE := "res://scenes/replays.tscn"
 const FIGHTER_SCENE := preload("res://scenes/fighter/fighter.tscn")
 const TICKS_PER_SECOND := 60
 ## "ROUND N" shows from the start of the intro; "FIGHT!" at the end, when input unlocks.
@@ -84,6 +85,10 @@ var netplay: Node
 var _waiting_for_screen := false
 ## The pre-fight intro while it plays (FightIntro), else null.
 var intro: FightIntro
+## Saves offline matches as replays (Vs CPU, Versus, Arcade), else null.
+var recorder: ReplayRecorder
+## Plays GameState.replay (REPLAY mode), else null.
+var replay_match: ReplayMatch
 
 @onready var camera: ActionCamera = $ActionCamera
 @onready var hud: FightHud = $HUD
@@ -101,8 +106,8 @@ func _ready() -> void:
 	dummy = DummyController.new()
 	var p1 := _spawn_fighter(GameState.player_character, PlayerController.new("p1_"))
 	var p2_controller: FighterController = ai
-	if is_online():
-		p2_controller = NetInputController.new() # replaced by the session's own
+	if is_online() or is_replay():
+		p2_controller = NetInputController.new() # replaced by the session's (or replay's) own
 	elif is_versus():
 		p2_controller = PlayerController.new("p2_")
 	elif is_training():
@@ -132,10 +137,16 @@ func _ready() -> void:
 		ai.set_difficulty(stage_entry.difficulty)
 		hud.p2_name.text = "%s (%s)" % [GameState.arcade.opponent_title(), "BOSS" if stage_entry.boss else "CPU"]
 	hud.rematch_pressed.connect(_on_rematch_pressed)
-	hud.restart_pressed.connect(start_match)
+	hud.restart_pressed.connect(func() -> void:
+		if replay_match:
+			replay_match.restart()
+		else:
+			start_match())
 	hud.character_select_pressed.connect(func() -> void:
 		if is_online():
 			Net.back_to_lobby()
+		elif is_replay():
+			_go_to(REPLAYS_SCENE)
 		else:
 			_go_to(CHARACTER_SELECT_SCENE))
 	hud.main_menu_pressed.connect(_on_main_menu_pressed)
@@ -162,7 +173,17 @@ func _ready() -> void:
 		demo.name = "DemoMode"
 		add_child(demo)
 		demo.setup(self)
+	elif records_replays():
+		recorder = ReplayRecorder.new()
+		add_child(recorder)
+		recorder.setup(self, GameState.Mode.keys()[GameState.mode].to_lower(), _boss_meter())
 	start_match()
+	if is_replay():
+		replay_match = ReplayMatch.new()
+		add_child(replay_match)
+		replay_match.setup(self, GameState.replay)
+		(hud.get_node("%PauseSelectButton") as Button).text = "Replays"
+		(hud.get_node("%RestartButton") as Button).text = "Watch Again"
 	if is_online():
 		netplay = SpectatorMatch.new() if Net.spectating else NetplayMatch.new()
 		add_child(netplay)
@@ -181,7 +202,7 @@ func _ready() -> void:
 
 ## Pre-fight intros: offline matches (not training), if the player hasn't turned them off.
 func wants_intro() -> bool:
-	if not Settings.fight_intros or is_online() or is_training():
+	if not Settings.fight_intros or is_online() or is_training() or is_replay():
 		return false
 	return fighters.any(func(f: Fighter) -> bool: return f.data.intro_animation != &"")
 
@@ -209,6 +230,22 @@ func is_demo() -> bool:
 
 
 ## No timer and no K.O.: training and the demo.
+func is_replay() -> bool:
+	return GameState.mode == GameState.Mode.REPLAY
+
+
+## Offline matches that are saved as replays.
+func records_replays() -> bool:
+	return ReplayRecorder.enabled and GameState.mode in [GameState.Mode.VS_CPU, GameState.Mode.VERSUS, GameState.Mode.ARCADE]
+
+
+## P2 starts every round with a full meter: the Arcade boss (and its replays).
+func _boss_meter() -> bool:
+	if is_replay():
+		return bool(GameState.replay.meta.get("boss", false))
+	return is_arcade() and GameState.arcade.current().boss
+
+
 func is_endless() -> bool:
 	return is_training() or is_demo()
 
@@ -231,6 +268,8 @@ func start_match() -> void:
 	round_number = 1
 	round_wins = [0, 0]
 	match_winner = null
+	round_winner = null # (with last_hit_point: a rematch must start from the same state as a new match)
+	last_hit_point = Vector3.ZERO
 	hud.set_round_wins(round_wins)
 	hud.hide_result()
 	hud.end_cinematic()
@@ -240,6 +279,8 @@ func start_match() -> void:
 		GameState.arcade.restart_stage(false) # a restarted stage starts from its own score
 		hud.set_score(GameState.arcade.score)
 	_start_round()
+	if recorder:
+		recorder.begin()
 	if intro:
 		intro.skip() # restarted from the pause menu mid-intro; the round call follows it
 	if is_endless():
@@ -258,7 +299,7 @@ func _start_round() -> void:
 	hud.set_timer(GameState.ROUND_TIME_SECONDS)
 	for fighter in fighters:
 		fighter.input_locked = true
-	if is_arcade() and GameState.arcade.current().boss:
+	if _boss_meter():
 		fighters[1].add_meter(Fighter.MAX_METER) # the boss starts every round with a super ready
 	if is_training() or resimulating or _waiting_for_screen:
 		return # no round call-outs (training skips straight to the fight)
@@ -425,6 +466,8 @@ func _arcade_match_over(p1_won: bool) -> void:
 func _on_rematch_pressed() -> void:
 	if is_online():
 		netplay.request_rematch()
+	elif replay_match:
+		replay_match.restart()
 	elif not is_arcade():
 		start_match()
 	elif GameState.arcade.cleared:
@@ -794,6 +837,8 @@ func _unhandled_input(event: InputEvent) -> void:
 				debug_draw = not debug_draw
 				for fighter in fighters:
 					fighter.debug_draw = debug_draw
+			KEY_F5 when replay_match:
+				replay_match.restart()
 			KEY_F5 when not is_online():
 				start_match()
 			_:
@@ -815,8 +860,8 @@ func _cycle_cpu_mode() -> void:
 
 
 func _update_debug_text() -> void:
-	if is_training() or is_arcade() or is_online() or is_demo():
-		hud.set_debug_text("") # training shows its own status line; arcade its score; online the connection
+	if is_training() or is_arcade() or is_online() or is_demo() or is_replay():
+		hud.set_debug_text("") # training shows its own status line; arcade its score; online the connection; replays their controls
 		return
 	if not OS.is_debug_build():
 		hud.set_debug_text("") # release builds: no debug overlay or debug keys

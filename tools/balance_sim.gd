@@ -22,6 +22,7 @@ func _initialize() -> void:
 	var matches := int(args[0]) if args.size() > 0 else 6
 	var difficulty := int(args[1]) if args.size() > 1 else AIController.Difficulty.HARD
 	await process_frame
+	ReplayRecorder.enabled = false # thousands of matches: not the player's replays
 	var gs = root.get_node("GameState")
 	gs.mode = gs.Mode.VS_CPU
 	gs.stage_path = "res://scenes/stages/%s.tscn" % args[3] if args.size() > 3 else gs.DEFAULT_STAGE

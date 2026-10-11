@@ -219,6 +219,9 @@ func _initialize() -> void:
 	var settings_file: String = root.get_node("Settings").PATH
 	var had_settings := FileAccess.file_exists(settings_file)
 	var settings_bytes := FileAccess.get_file_as_bytes(settings_file) if had_settings else PackedByteArray()
+	# Matches played here end up as replays: keep them out of the player's folder.
+	Replay.directory = "user://replays_test/"
+	_clear_replays()
 	# Fixed matchup: per-character frame data makes timings depend on who's fighting.
 	var gs = root.get_node("GameState")
 	gs.player_character = gs.roster[0] # Kenji
@@ -360,6 +363,7 @@ func _initialize() -> void:
 	await courtyard_tests()
 	await train_tests()
 	await scores_credits_tests()
+	await replay_tests()
 	await controls_tests()
 	await outfit_tests()
 	await rollback_tests()
@@ -372,6 +376,8 @@ func _initialize() -> void:
 		f.close()
 	elif FileAccess.file_exists(settings_file):
 		DirAccess.remove_absolute(settings_file)
+	_clear_replays()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(Replay.directory))
 	check("the player's settings file is left as it was", not had_settings or FileAccess.get_file_as_bytes(settings_file) == settings_bytes)
 	check("no script errors during the run", errors.count == 0, "%d, first: %s" % [errors.count, errors.first])
 	print("\n%d failure(s)" % fails)
@@ -989,6 +995,183 @@ func arcade_tests() -> void:
 	check("Arcade: Continue restarts the stage and counts", gs.arcade.continues == continues + 1 and m.phase == m.Phase.INTRO)
 	gs.arcade = null
 	gs.mode = gs.Mode.VS_CPU
+
+
+func _clear_replays() -> void:
+	var dir := DirAccess.open(Replay.directory)
+	if dir:
+		for file in dir.get_files():
+			dir.remove(file)
+
+
+## Plays a Vs CPU match to the end with the CPU on both sides; returns the state checksum
+## after its last tick.
+func _cpu_match(fight: Node, seed: int) -> int:
+	var p1_ai := AIController.new(AIController.Difficulty.HARD, seed)
+	p1_ai.attach(fight.fighters[0])
+	fight.fighters[0].controller = p1_ai
+	fight.ai.set_difficulty(AIController.Difficulty.HARD)
+	fight.fighters[1].controller = fight.ai
+	fight.start_match()
+	var t := 0
+	while fight.phase != fight.Phase.MATCH_OVER and t < 40000:
+		fight.step()
+		t += 1
+	return fight.checksum(fight.save_state())
+
+
+## Loads `replay` in REPLAY mode and plays it to its last tick.
+func _watch(gs, replay: Replay) -> Node:
+	gs.mode = gs.Mode.REPLAY
+	gs.replay = replay
+	for c: CharacterData in gs.roster:
+		if String(c.id) == replay.meta.p1:
+			gs.player_character = c
+		if String(c.id) == replay.meta.p2:
+			gs.p2_character = c
+	gs.stage_path = replay.meta.stage
+	change_scene_to_file("res://scenes/fight.tscn")
+	await process_frame; await process_frame
+	var watch = current_scene
+	while watch.replay_match.frame < replay.ticks() and watch.replay_match.advance():
+		pass
+	return watch
+
+
+func replay_tests() -> void:
+	var gs = root.get_node("GameState")
+	_clear_replays()
+	gs.mode = gs.Mode.VS_CPU
+	gs.player_character = gs.roster[0] # Kenji (fireballs)
+	gs.p2_character = gs.roster[3] # Valka (command grabs)
+	gs.stage_path = gs.DOJO_STAGE # wall splats
+	change_scene_to_file("res://scenes/fight.tscn")
+	await process_frame; await process_frame
+	var fight = current_scene
+	fight.set_physics_process(false)
+	check("Replays: offline Vs CPU matches are recorded", fight.recorder != null)
+	var end_a := _cpu_match(fight, 4242)
+	var first: Replay = fight.recorder.saved
+	var wins_a: Array = fight.round_wins.duplicate()
+	check("Replays: a finished match is saved with its result", first != null and FileAccess.file_exists(first.path)
+		and first.meta.wins == wins_a and first.meta.mode == "vs_cpu" and first.meta.p1 == "kenji" and first.ticks() > 600,
+		"%s, %d ticks" % [first.path if first else "none", first.ticks() if first else 0])
+	# Rematch in the same scene: the second recording must start from a clean state too.
+	var end_b := _cpu_match(fight, 777)
+	var second: Replay = fight.recorder.saved
+	check("Replays: a rematch is saved as a second replay", second != first and Replay.list().size() == 2)
+
+	var loaded := Replay.load_file(first.path)
+	check("Replays: the file round-trips (inputs, checksums, meta)", loaded != null and loaded.p1 == first.p1 and loaded.p2 == first.p2
+		and loaded.checksums.size() == first.checksums.size() and loaded.meta.p2 == "valka" and loaded.problem() == "",
+		"%d bytes for %d ticks" % [FileAccess.get_file_as_bytes(first.path).size(), first.ticks()])
+
+	var watch = await _watch(gs, loaded)
+	var rm: ReplayMatch = watch.replay_match
+	check("Replays: playback matches every recorded checksum and ends the same way",
+		not rm.diverged and rm.checks_passed >= loaded.checksums.size() - 1 and watch.checksum(watch.save_state()) == end_a
+		and watch.round_wins == wins_a and watch.phase == watch.Phase.MATCH_OVER,
+		"%d checks" % rm.checks_passed)
+	check("Replays: the players' names are shown, and a replay isn't recorded again", watch.recorder == null
+		and watch.hud.p1_name.text == str(loaded.meta.p1_name))
+	rm.seek(900)
+	var at_900: int = watch.checksum(watch.save_state())
+	rm.seek(loaded.ticks())
+	var back_at_end: int = watch.checksum(watch.save_state())
+	rm.seek(300)
+	rm.seek(900)
+	check("Replays: seeking back and forth lands on the same states", rm.frame == 900 and watch.checksum(watch.save_state()) == at_900
+		and back_at_end == end_a and not rm.diverged)
+	rm.restart()
+	check("Replays: Watch Again starts from the top", rm.frame == 0 and watch.phase == watch.Phase.INTRO)
+	rm.change_speed(-2)
+	check("Replays: slow motion slows the engine", is_equal_approx(Engine.time_scale, 0.25) and rm.speed() == 0.25)
+	rm.change_speed(4)
+	check("Replays: 4x runs four ticks a frame at normal engine speed", is_equal_approx(Engine.time_scale, 1.0) and rm.speed() == 4.0)
+	rm.paused = true
+	rm._physics_process(1.0 / 60.0)
+	var paused_at := rm.frame
+	rm._step_once = true
+	rm._physics_process(1.0 / 60.0)
+	check("Replays: paused holds; a frame step advances one tick", paused_at == 0 and rm.frame == 1)
+	var second_loaded := Replay.load_file(second.path)
+	var watch2 = await _watch(gs, second_loaded)
+	check("Replays: the rematch's replay plays back exactly too", not watch2.replay_match.diverged
+		and watch2.checksum(watch2.save_state()) == end_b)
+
+	# A replay that doesn't match the game stops instead of showing a different fight.
+	var tampered := Replay.load_file(first.path)
+	for i in range(200, 260):
+		tampered.p1[i] = InputBuffer.pack(6, InputBuffer.HP)
+	var watch3 = await _watch(gs, tampered)
+	check("Replays: a replay that drifts from its checksums stops (out of sync)", watch3.replay_match.diverged
+		and watch3.replay_match.frame <= 300, "stopped at %d" % watch3.replay_match.frame)
+
+	# The Arcade boss starts every round with a full meter, so its replays must too.
+	var boss := Replay.new()
+	boss.meta = Replay.new_meta("arcade", gs.DOJO_STAGE, gs.roster[0], gs.roster[0], "Kenji", "Shadow Kenji (BOSS)", true)
+	boss.p1 = PackedInt32Array([InputBuffer.pack(5, 0)])
+	boss.p2 = PackedInt32Array([InputBuffer.pack(5, 0)])
+	gs.mode = gs.Mode.REPLAY
+	gs.replay = boss
+	gs.player_character = gs.roster[0]
+	gs.p2_character = gs.roster[0]
+	gs.stage_path = gs.DOJO_STAGE
+	change_scene_to_file("res://scenes/fight.tscn")
+	await process_frame; await process_frame
+	check("Replays: a boss replay gives P2 the boss's full meter", current_scene.fighters[1].meter == Fighter.MAX_METER
+		and current_scene.fighters[0].meter == 0)
+
+	# Files: damage and other versions are refused, pruning keeps kept replays.
+	check("Replays: damaged or foreign files don't load", Replay.from_bytes(PackedByteArray([1, 2, 3])) == null
+		and Replay.from_bytes("3DFR".to_ascii_buffer() + PackedByteArray([1, 0, 255, 255, 255, 255, 0, 0, 0, 0])) == null)
+	var bad_input := Replay.load_file(first.path)
+	bad_input.p1[5] = 0x1FF0 # not a direction
+	var bad_path := Replay.directory.path_join("bad.rpl")
+	bad_input.save(bad_path)
+	check("Replays: invalid input words are rejected", Replay.load_file(bad_path) == null)
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(bad_path))
+	var old := Replay.load_file(first.path)
+	old.meta.version = "0.1.0"
+	check("Replays: other versions are listed but can't be watched", old.problem().contains("0.1.0"))
+	old.meta.version = gs.game_version()
+	old.meta.content = 12345
+	check("Replays: other game data can't be watched either", old.problem() != "")
+	first = Replay.load_file(first.path)
+	first.set_kept(true)
+	for i in Replay.MAX_UNKEPT + 3:
+		var extra := Replay.load_file(second.path)
+		extra.meta.date = 1000 + i # older than both real ones
+		extra.path = ""
+		extra.save()
+	Replay.prune()
+	var after := Replay.list()
+	check("Replays: pruning leaves the newest unkept ones plus every kept one",
+		after.size() == Replay.MAX_UNKEPT + 1 and after.any(func(r: Replay) -> bool: return r.kept())
+		and after.filter(func(r: Replay) -> bool: return int(r.meta.date) == 1000).is_empty(), "%d left" % after.size())
+
+	# The screen.
+	change_scene_to_file("res://scenes/main_menu.tscn")
+	await process_frame; await process_frame
+	check("Replays: the main menu has a Replays entry", current_scene.find_child("ReplaysButton", true, false) != null)
+	change_scene_to_file("res://scenes/replays.tscn")
+	await process_frame; await process_frame
+	var screen = current_scene
+	check("Replays: the screen lists every replay, newest first",
+		screen.rows.size() == after.size() and int(screen.replays[0].meta.date) >= int(screen.replays[1].meta.date))
+	var count: int = screen.rows.size()
+	screen.request_delete(count - 1)
+	check("Replays: one Delete press only asks", Replay.list().size() == count)
+	screen.request_delete(count - 1)
+	check("Replays: the second press deletes", Replay.list().size() == count - 1 and screen.rows.size() == count - 1)
+	var kept_before: int = screen.replays.filter(func(r: Replay) -> bool: return r.kept()).size()
+	screen.toggle_keep(0)
+	check("Replays: Keep toggles and is saved", Replay.list().filter(func(r: Replay) -> bool: return r.kept()).size() != kept_before)
+	_clear_replays()
+	gs.mode = gs.Mode.VS_CPU
+	gs.replay = null
+	gs.player_character = gs.roster[0]
+	gs.p2_character = gs.roster[2]
 
 
 ## Every file path under `dir` (recursive).
@@ -3925,7 +4108,24 @@ func server_tests() -> void:
 	for i in 30:
 		spectator._physics_process(0.0)
 	check("after MATCH_END the spectator plays on (victory scene)", spectator.frame == behind + 30 and not spectator.ended)
+	var watched: Replay = spectator.saved_replay
+	check("a watched match is saved as a replay", watched != null and watched.ticks() == log.ticks()
+		and watched.meta.mode == "spectated" and watched.checksums.size() == log.checksums.size())
 	watch.queue_free()
+
+	# A player's own replay is built the same way (a publisher into a local log): played
+	# back offline, it must pass every host checksum of the rollback match.
+	var online_replay := Replay.from_log(log, "online", gs.stage_path)
+	gs.mode = gs.Mode.REPLAY
+	gs.replay = online_replay
+	var replayed := _net_fight()
+	var rm: ReplayMatch = replayed.replay_match
+	while rm.frame < online_replay.ticks() and rm.advance():
+		pass
+	check("an online match's replay plays back offline, every host checksum matching", not rm.diverged
+		and rm.checks_passed >= online_replay.checksums.size() - 1, "%d checks" % rm.checks_passed)
+	replayed.queue_free()
+	gs.mode = gs.Mode.ONLINE
 
 	# A tampered feed (one input changed) is caught by the next checksum.
 	var tampered := SpectatorFeed.Log.new()
@@ -3945,6 +4145,7 @@ func server_tests() -> void:
 	check("a feed that doesn't match the host's checksums stops the replay", spectator2.diverged and spectator2.frame <= 300,
 		"diverged %s at %d" % [spectator2.diverged, spectator2.frame])
 	errors.count = warnings # the divergence warning is expected
+	check("an out-of-sync match isn't saved as a replay", spectator2.saved_replay == null)
 	watch2.queue_free()
 	net.spectating = false
 	net.feed = SpectatorFeed.Log.new()

@@ -5,6 +5,7 @@ const OPTIONS_SCENE := "res://scenes/options.tscn"
 const BEST_SCORES_SCENE := "res://scenes/best_scores.tscn"
 const CREDITS_SCENE := "res://scenes/credits.tscn"
 const ONLINE_SCENE := "res://scenes/online_menu.tscn"
+const REPLAYS_SCENE := "res://scenes/replays.tscn"
 
 @onready var start_button: Button = %StartButton
 @onready var arcade_button: Button = %ArcadeButton
@@ -65,6 +66,13 @@ func _ready() -> void:
 	quit_button.pressed.connect(_on_quit_pressed)
 	options_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(OPTIONS_SCENE))
 	best_scores_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(BEST_SCORES_SCENE))
+	# Replays sit under Best Scores; built from it so they share the menu's look.
+	var replays_button := best_scores_button.duplicate(0) as Button
+	replays_button.name = "ReplaysButton"
+	replays_button.unique_name_in_owner = false
+	replays_button.text = "Replays"
+	best_scores_button.add_sibling(replays_button)
+	replays_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(REPLAYS_SCENE))
 	credits_button.pressed.connect(func() -> void: get_tree().change_scene_to_file(CREDITS_SCENE))
 	start_button.grab_focus()
 	Audio.music(&"menu")

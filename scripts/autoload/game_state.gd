@@ -34,7 +34,7 @@ const STAGES := [
 const ROUNDS_TO_WIN := 2
 const ROUND_TIME_SECONDS := 99
 
-enum Mode { VS_CPU, VERSUS, TRAINING, ARCADE, ONLINE, DEMO }
+enum Mode { VS_CPU, VERSUS, TRAINING, ARCADE, ONLINE, DEMO, REPLAY }
 
 var roster: Array[CharacterData] = []
 ## VS_CPU: P2 is the AI. VERSUS: P2 is a second local player. TRAINING: P2 is the
@@ -49,6 +49,8 @@ var stage_path: String = DEFAULT_STAGE
 var match_seed := 1
 ## The Arcade run in progress (ARCADE mode), or null.
 var arcade: ArcadeRun
+## REPLAY: the saved match being watched.
+var replay: Replay
 ## Stage preloaded by the loading screen, kept referenced so it stays in the resource
 ## cache until the fight scene loads it (the loading screen itself is freed first).
 var preloaded_stage: Resource
@@ -169,6 +171,20 @@ func start_demo(tree: SceneTree) -> void:
 	p2_character = pick_random_cpu()
 	stage_path = (STAGES.pick_random() as Dictionary).path
 	match_seed = randi()
+	go_to_fight(tree)
+
+
+## Watches a saved replay (Replay.problem() must be empty): its fighters and stage,
+## through the loading screen.
+func start_replay(tree: SceneTree, saved: Replay) -> void:
+	mode = Mode.REPLAY
+	replay = saved
+	for character in roster:
+		if String(character.id) == str(saved.meta.p1):
+			player_character = character
+		if String(character.id) == str(saved.meta.p2):
+			p2_character = character
+	stage_path = str(saved.meta.stage)
 	go_to_fight(tree)
 
 

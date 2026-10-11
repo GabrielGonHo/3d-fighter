@@ -78,6 +78,11 @@ const MODE_SCALES := [0.0, 0.5, 1.0]
 @export_group("KO slow motion")
 @export var ko_time_scale := 0.3
 @export var ko_slowmo_seconds := 0.6
+## Engine.time_scale outside the K.O. slow motion (a replay's playback speed).
+var normal_time_scale := 1.0:
+	set(value):
+		normal_time_scale = value
+		Engine.time_scale = value
 
 var manager: Node
 var mode: Mode = Mode.FULL
@@ -131,7 +136,7 @@ func snap() -> void:
 	victory_target = null
 	intro_target = null
 	_super_time = 0.0
-	Engine.time_scale = 1.0
+	Engine.time_scale = normal_time_scale
 	var targets := _compute_targets(0.0)
 	_base_position = targets.position
 	_look_target = targets.look
@@ -254,7 +259,7 @@ func start_victory(winner: Fighter) -> void:
 	intensity = 0.0
 	_trauma = 0.0
 	_fov_punch = 0.0
-	Engine.time_scale = 1.0
+	Engine.time_scale = normal_time_scale
 	# Film from the side the camera is already on, so shot 1 continues the fight view.
 	var to_camera := global_position - winner.global_position
 	_victory_side = 1.0 if to_camera.dot(_victory_right(winner)) >= 0.0 else -1.0
@@ -360,9 +365,9 @@ func _on_knocked_out(loser: Fighter) -> void:
 	_add_trauma(0.7)
 	_fov_punch = MODE_SCALES[mode]
 	if mode != Mode.OFF:
-		Engine.time_scale = ko_time_scale
+		Engine.time_scale = ko_time_scale * normal_time_scale
 		get_tree().create_timer(ko_slowmo_seconds, true, false, true).timeout.connect(
-			func() -> void: Engine.time_scale = 1.0)
+			func() -> void: Engine.time_scale = normal_time_scale)
 
 
 ## Extra shake from effects (ground pounds, super finishers), scaled by the camera mode.
