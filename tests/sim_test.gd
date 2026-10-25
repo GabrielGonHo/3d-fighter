@@ -369,6 +369,8 @@ func _initialize() -> void:
 	await rollback_tests()
 	await net_tests()
 	await server_tests()
+	await divaza_tests()
+	await valdiri_tests()
 
 	if had_settings:
 		var f := FileAccess.open(settings_file, FileAccess.WRITE)
@@ -3989,6 +3991,102 @@ func _lobby_pump(lobby: FakeLobby, client: LobbyClient, rounds: int, until := Ca
 			return
 		OS.delay_msec(2)
 
+
+## SF5 phase A: the two boxers of the reference fight. Their sets are punches only
+## (no kicks, motion inputs, projectiles or supers), the boxing trials chain, and a
+## boxer CPU throws only punches.
+func divaza_tests() -> void:
+	var gs = root.get_node("GameState")
+	var divaza: CharacterData = gs.roster.filter(func(c): return c.id == &"divaza").front()
+	check("La Divaza: in the roster as the eighth fighter", divaza != null and gs.roster.size() >= 8 and gs.roster[7] == divaza)
+	await _boxing_tests(divaza, gs)
+
+func valdiri_tests() -> void:
+	var gs = root.get_node("GameState")
+	var valdiri: CharacterData = gs.roster.filter(func(c): return c.id == &"valdiri").front()
+	check("Andrea Valdiri: in the roster as the ninth fighter", valdiri != null and gs.roster.size() >= 9 and gs.roster[8] == valdiri)
+	await _boxing_tests(valdiri, gs)
+
+func _boxing_tests(boxer: CharacterData, gs) -> void:
+	# The moveset is punches only: no kick buttons, no motion inputs, no projectiles, no supers.
+	var clean := true
+	for move in boxer.moves:
+		clean = clean and not move.input.contains("K") and move.motion() == "" \
+			and move.projectile_speed == 0.0 and not move.super_move
+	check("%s: the moveset is punches only" % boxer.display_name, clean, "%d moves" % boxer.moves.size())
+	var jab := _move_with_input(boxer, "LP")
+	var hook := _move_with_input(boxer, "6LP")
+	var uppercut := _move_with_input(boxer, "2HP")
+	check("%s: has jab, hook and uppercut" % boxer.display_name, jab != null and hook != null and uppercut != null
+		and uppercut.launches, "jab %s hook %s uppercut %s" % [jab != null, hook != null, uppercut != null])
+	check("%s: the one-two-three-four cancels chain" % boxer.display_name,
+		jab.cancel_into.has("HP") and jab.cancel_into.has("6LP") and _move_with_input(boxer, "HP").cancel_into.has("2HP")
+		and hook.cancel_into.has("2HP"), "jab -> %s" % [str(jab.cancel_into)])
+
+	# The reference fight: the boxer vs the other boxer, on the Boxing Ring.
+	var other: CharacterData
+	for c in gs.roster:
+		if c != boxer and c.archetype == "Boxer":
+			other = c
+	gs.mode = gs.Mode.VS_CPU
+	gs.player_character = boxer
+	gs.p2_character = other
+	gs.stage_path = gs.DEFAULT_STAGE
+	change_scene_to_file("res://scenes/fight.tscn")
+	await process_frame; await process_frame
+	m = current_scene
+	m.set_physics_process(false)
+	p1 = m.fighters[0]; p2 = m.fighters[1]
+	p1.controller = ctl
+	var D := DummyController.Mode
+
+	# Scripted boxer: the jab and the hook land, the standing block holds, the uppercut
+	# launches, and the KO ends the round.
+	reset(D.STAND); approach(1.1)
+	var hp := p2.health
+	press(InputBuffer.LP); step(8)
+	check("%s: the boxer's jab hits" % boxer.display_name, p2.health == hp - p1._move_for_input("LP").damage, "hp %d -> %d" % [hp, p2.health])
+	step(30)
+	reset(D.STAND); approach(1.1)
+	hp = p2.health
+	press(InputBuffer.LP, 6); step(14)
+	check("%s: the hook (forward + LP) hits" % boxer.display_name, p2.health == hp - p1._move_for_input("6LP").damage, "hp %d -> %d" % [hp, p2.health])
+	step(30)
+	reset(D.STAND_BLOCK); approach(1.1)
+	hp = p2.health
+	press(InputBuffer.LP); step(8)
+	check("%s: the standing block holds the jab" % boxer.display_name, p2.health == hp and p2.state == Fighter.State.BLOCKSTUN, "hp %d, %s" % [p2.health, state_name(p2)])
+	step(30)
+	reset(D.STAND); approach(1.0)
+	press(InputBuffer.HP, 2); step(22)
+	check("%s: the uppercut launches" % boxer.display_name, p2.state == Fighter.State.AIR_HIT and p2.position.y > 0.1, "%s y=%.2f" % [state_name(p2), p2.position.y])
+	step(160)
+	reset(D.STAND); approach(1.1)
+	p2.health = 10
+	press(InputBuffer.LP); step(8)
+	check("%s: the KO ends the round" % boxer.display_name, p2.state == Fighter.State.KO and m.phase == m.Phase.ROUND_OVER, "%s, %d" % [state_name(p2), m.phase])
+	step(m.ROUND_OVER_TICKS + 1)
+
+	# The boxer's CPU only throws punches: 20 s of scripted-idle P1 vs the AI.
+	reset(D.STAND)
+	var ai := AIController.new(AIController.Difficulty.NORMAL, 11)
+	ai.attach(p2)
+	p2.controller = ai
+	ai.reset()
+	var cpu_moves := {}
+	for t in 1200:
+		step()
+		if p2.current_move:
+			cpu_moves[p2.current_move.input] = true
+	var no_kicks := cpu_moves.keys().all(func(k: String) -> bool: return not k.contains("K"))
+	check("%s: the CPU boxer only throws punches" % boxer.display_name,
+		cpu_moves.size() > 0 and no_kicks and absf(p2.position.x) < 10.0, "moves %s" % [str(cpu_moves.keys())])
+
+func _move_with_input(c: CharacterData, input: String) -> MoveData:
+	for move in c.moves:
+		if move.input == input:
+			return move
+	return null
 
 func server_tests() -> void:
 	var gs = root.get_node("GameState")
