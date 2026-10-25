@@ -37,6 +37,8 @@ const BASE := {
 ## from their clips at the impact time (fighter-local, -Z toward the opponent).
 ## startup: frames added to every base move (min 3); base_startup: per-move exceptions
 ## (base file -> frames added instead). damage / knockback: multipliers.
+## base_moves: which BASE entries the character gets (default: all). Boxers get []:
+## their whole set is defined in signatures, with no kicks, specials or projectiles.
 const CHARACTERS := {
 	"kenji": {
 		startup = 0, damage = 1.05, knockback = 1.0, hitstop = 0,
@@ -247,6 +249,62 @@ const CHARACTERS := {
 				{knockdown = true, chip_damage = 14, camera_intensity = 0.6, impact_fx = &"shockwave"}],
 		},
 	},
+	"divaza": {
+		# SF5 boxer (phase A, reference fight: La Divaza vs Andrea Valdiri).
+		# No base moves: the whole set is in signatures, no kicks, specials or
+		# projectiles. The model is a provisional placeholder pending official
+		# SF5 artwork; stats and colors are game-design values, not real data.
+		startup = 0, damage = 1.0, knockback = 1.0, hitstop = 0,
+		base_moves = [],
+		create = {display_name = "La Divaza", archetype = "Boxer", select_order = 7,
+			description = "SF5 speed boxer. Rapid one-two-three strings, a long hook, and the uppercut to pop you up. (Provisional model pending official artwork.)",
+			model_scene = "res://assets/characters/base/Superhero_Female_FullBody.gltf",
+			hair_scenes = ["res://assets/characters/hair/Hair_Bob.tscn", "res://assets/characters/hair/Eyebrows_Female.gltf"],
+			model_scale = 1.02, hair_color = Color(0.15, 0.08, 0.05), placeholder_color = Color(0.85, 0.3, 0.45)},
+		stats = {max_health = 1000, walk_speed = 2.5, back_walk_speed = 2.1, dash_speed = 7.0,
+			jump_velocity = 6.4, weight = 0.9, throw_damage = 90, power_rating = 0.35, speed_rating = 0.9,
+			realistic_shading = true,
+			victory_animations = [&"fight/victory_fist_pump", &"fight/victory_point"],
+			alt_body_albedo = "res://assets/characters/base/T_Superhero_Female_Dark_BaseColor.png", alt_hair_color = Color(0.45, 0.1, 0.15)},
+		signatures = {
+			# One-two-three-four: jabs chain into the straight and the hook; the
+			# straight and hook chain into the uppercut. All clips already exist.
+			"jab": ["Jab", "LP", &"ual1/Punch_Jab", 0.20, 0.62, 3, 2, 8, 26, H.HIGH, 14, 10, 5, Vector2(1.1, 0), Vector3(0, 1.40, -0.78), 0.15, {cancel_into = ["LP", "HP", "6LP", "2LP"]}],
+			"straight": ["Straight", "HP", &"ual1/Punch_Cross", 0.28, 0.85, 8, 3, 18, 72, H.HIGH, 20, 14, 8, Vector2(2.4, 0), Vector3(0.1, 1.36, -0.70), 0.18, {cancel_into = ["6LP", "2HP"], camera_intensity = 0.1}],
+			"crouch_jab": ["Crouching Jab", "2LP", &"fight/crouch_jab", 0.12, 0.0, 4, 2, 9, 22, H.MID, 13, 9, 5, Vector2(1.0, 0), Vector3(-0.1, 0.84, -0.55), 0.15, {cancel_into = ["2LP", "6LP", "2HP"]}],
+			"hook": ["Hook", "6LP", &"fight/rushing_hook", 0.28, 0.0, 8, 3, 20, 50, H.MID, 17, 12, 7, Vector2(2.2, 0), Vector3(-0.15, 0.72, -0.95), 0.22, {lunge = 3.5, cancel_into = ["2HP", "LP"], camera_intensity = 0.15}],
+			"uppercut": ["Uppercut", "2HP", &"fight/uppercut", 0.22, 0.0, 7, 4, 24, 80, H.MID, 0, 16, 10, Vector2(0.8, 6.5), Vector3(0.0, 1.30, -0.40), 0.25, {launches = true, camera_intensity = 0.35}],
+			"jump_jab": ["Jump Jab", "j.LP", &"fight/jump_punch", 0.10, 0.4, 4, 8, 6, 36, H.OVERHEAD, 14, 10, 5, Vector2(1.0, 0), Vector3(-0.22, 1.0, -0.63), 0.18, {}],
+			"jump_hammer": ["Jump Hammer", "j.HP", &"fight/jump_punch", 0.10, 0.4, 7, 5, 10, 68, H.OVERHEAD, 20, 14, 8, Vector2(1.8, 0), Vector3(-0.22, 1.0, -0.63), 0.2, {camera_intensity = 0.1}],
+		},
+		specials = {},
+	},
+	"valdiri": {
+		# SF5 boxer: the heavyweight counterpuncher, same rules as La Divaza
+		# (punches only) and the same provisional-model caveat.
+		startup = 0, damage = 1.0, knockback = 1.0, hitstop = 0,
+		base_moves = [],
+		create = {display_name = "Andrea Valdiri", archetype = "Boxer", select_order = 8,
+			description = "SF5 heavyweight. Slow hands, heavy damage: he waits, counters, and the uppercut ends the round. (Provisional model pending official artwork.)",
+			model_scene = "res://assets/characters/base/Superhero_Male_FullBody.gltf",
+			hair_scenes = ["res://assets/characters/hair/Hair_Buzzed.gltf", "res://assets/characters/hair/Eyebrows_Regular.gltf"],
+			model_scale = 1.0, hair_color = Color(0.05, 0.04, 0.04), placeholder_color = Color(0.3, 0.55, 0.85)},
+		stats = {max_health = 1100, walk_speed = 1.9, back_walk_speed = 1.5, dash_speed = 5.2,
+			jump_velocity = 5.7, weight = 1.2, throw_damage = 130, power_rating = 0.85, speed_rating = 0.45,
+			realistic_shading = true,
+			victory_animations = [&"fight/victory_flex", &"fight/victory_fist_pump"],
+			alt_body_albedo = "res://assets/characters/base/T_Superhero_Male_Light.png", alt_hair_color = Color(0.5, 0.33, 0.15)},
+		signatures = {
+			"jab": ["Jab", "LP", &"ual1/Punch_Jab", 0.20, 0.62, 5, 2, 9, 34, H.HIGH, 15, 11, 5, Vector2(1.4, 0), Vector3(0, 1.40, -0.78), 0.15, {cancel_into = ["LP", "HP", "6LP", "2LP"]}],
+			"straight": ["Straight", "HP", &"ual1/Punch_Cross", 0.28, 0.85, 11, 3, 20, 100, H.HIGH, 22, 16, 9, Vector2(3.0, 0), Vector3(0.1, 1.36, -0.70), 0.18, {cancel_into = ["6LP", "2HP"], camera_intensity = 0.12}],
+			"crouch_jab": ["Crouching Jab", "2LP", &"fight/crouch_jab", 0.12, 0.0, 6, 2, 10, 30, H.MID, 14, 10, 5, Vector2(1.2, 0), Vector3(-0.1, 0.84, -0.55), 0.15, {cancel_into = ["2LP", "6LP", "2HP"]}],
+			"hook": ["Hook", "6LP", &"fight/rushing_hook", 0.28, 0.0, 11, 3, 22, 75, H.MID, 20, 14, 8, Vector2(2.8, 0), Vector3(-0.15, 0.72, -0.95), 0.22, {lunge = 3.0, cancel_into = ["2HP", "LP"], camera_intensity = 0.2}],
+			"uppercut": ["Uppercut", "2HP", &"fight/uppercut", 0.22, 0.0, 9, 4, 26, 110, H.MID, 0, 16, 10, Vector2(0.9, 6.5), Vector3(0.0, 1.30, -0.40), 0.25, {launches = true, camera_intensity = 0.4}],
+			"jump_jab": ["Jump Jab", "j.LP", &"fight/jump_punch", 0.10, 0.4, 5, 8, 6, 45, H.OVERHEAD, 15, 11, 6, Vector2(1.0, 0), Vector3(-0.22, 1.0, -0.63), 0.18, {}],
+			"jump_hammer": ["Jump Hammer", "j.HP", &"fight/jump_punch", 0.10, 0.4, 8, 5, 10, 85, H.OVERHEAD, 21, 15, 8, Vector2(1.8, 0), Vector3(-0.22, 1.0, -0.63), 0.2, {camera_intensity = 0.1}],
+		},
+		specials = {},
+	},
 }
 
 
@@ -307,6 +365,20 @@ const TRIALS := {
 		{name = "Palm to the Wall", steps = ["LP", "HP", "236P", "WALL", "6LP", "HP"], corner = true, tip = "Inch Palm near the edge splats them: walk in and follow up."},
 		{name = "Thousand Hands", steps = ["6LP", "HP", "236236P"], tip = "With a full meter, cancel the straight into the super."},
 	],
+	"divaza": [
+		{name = "One-Two-Three", steps = ["LP", "HP", "6LP"], tip = "Jab, straight, hook: the full one-two-three."},
+		{name = "Body Uppercut", steps = ["2LP", "2HP"], tip = "Crouching jab, then cancel into the uppercut launcher."},
+		{name = "Four-Punch Finisher", steps = ["LP", "HP", "6LP", "2HP"], tip = "One-two-three, then cancel the hook into the uppercut."},
+		{name = "Rush and Pop", steps = ["6LP", "LP", "HP", "2HP"], tip = "The hook pulls them in, the one-two follows, uppercut to finish."},
+		{name = "Rope Burn", steps = ["LP", "HP", "WALL", "2HP"], corner = true, tip = "Corner them against the ropes: one-two, then the uppercut on the wall."},
+	],
+	"valdiri": [
+		{name = "Heavy One-Two", steps = ["LP", "HP"], tip = "Slow hands, heavy damage: the jab chains into the straight."},
+		{name = "Hook and Pop", steps = ["6LP", "2HP"], tip = "The hook chains into the uppercut while they're up."},
+		{name = "Body Work", steps = ["2LP", "2LP", "HP"], tip = "Crouching jabs chain into each other and into the straight."},
+		{name = "Counter Jab", steps = ["2LP", "6LP", "2HP"], tip = "Body jab, hook over the top, then the uppercut."},
+		{name = "Rope Uppercut", steps = ["LP", "HP", "WALL", "2HP"], corner = true, tip = "Push them to the ropes, one-two, and the uppercut ends the round."},
+	],
 }
 
 const INTROS := {
@@ -357,6 +429,20 @@ const INTROS := {
 		rivals = {"valka": ["A grip is a promise. Let me break it.", "You held on. I let go."],
 			"kenji": ["Your fists are honest. That makes them easy.", "Discipline is good. Patience is better."]},
 	},
+	# SF5 boxers: lines are a design decision (flavor for the SF5 event), not quotes
+	# from the real participants.
+	"divaza": {
+		animation = &"fight/intro_knuckles", expression = &"grin",
+		lines = ["A la hora de pesar, la ventaja es mía.", "El ring es mi casa. Y yo no perdono.", "¡A que suene la campana!"],
+		quotes = ["¿Eso fue todo? Aún no ha empezado.", "Caes cuando yo lo decido.", "Buen round. Ahora el siguiente."],
+		rivals = {"valdiri": ["El campeón y el retador: alguien va a caer.", "Tu jab es lento. Yo no lo soy."]},
+	},
+	"valdiri": {
+		animation = &"fight/intro_shadowbox", expression = &"neutral",
+		lines = ["Campeones se hacen, no se heredan.", "Cada golpe cuenta. El último decide.", "Defiende el cinturón: esta noche, conmigo."],
+		quotes = ["El cinturón sigue en mi cintura.", "Resistir no es lo mismo que ganar.", "Siguiente retador."],
+		rivals = {"divaza": ["La velocidad no gana cinturones.", "Tu ritmo es mi invitación."]},
+	},
 }
 
 
@@ -366,7 +452,8 @@ func _initialize() -> void:
 		var dir := "res://data/moves/%s/" % id
 		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(dir))
 		var moves: Array[MoveData] = []
-		for file: String in BASE:
+		var base_files: Array = spec.get("base_moves", BASE.keys())
+		for file: String in base_files:
 			var move := _make(BASE[file])
 			move.startup = maxi(3, move.startup + spec.get("base_startup", {}).get(file, spec.startup))
 			move.damage = roundi(move.damage * spec.damage)

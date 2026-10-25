@@ -225,6 +225,38 @@ func _specs() -> Dictionary:
 			alt_colors = [Color(0.8, 0.79, 0.75), Color(0.08, 0.08, 0.09), Color(0.5, 0.06, 0.06), Color(0.08, 0.08, 0.09)],
 			fabrics = [&"cotton", &"cotton", &"cotton", &"cotton"],
 		},
+		"divaza": {
+			detailed = true,
+			pieces = func(L: Dictionary) -> Array:
+				return [
+					# Crop tank: scooped neck, hem just under the chest, sleeveless.
+					{slot = Slot.MAIN, offset = 0.006, region = func(p, n):
+						return minf(_sleeveless(p, L, L.chest - 0.10, L.shoulder * 0.95), -_scoop(p, L, 0.10, 0.07))},
+					# Loose boxing shorts above the knee, a contrast waistband.
+					{slot = Slot.ACCENT, offset = 0.009, trim_slot = Slot.TRIM,
+						region = func(p, n): return _legs(p, L.knee + 0.16, L.waist + 0.03),
+						trim = func(p, n): return (L.waist + 0.024) - p.y},
+				],
+			colors = [Color(0.16, 0.16, 0.18), Color(0.85, 0.3, 0.45), Color(0.62, 0.12, 0.2)],
+			alt_colors = [Color(0.85, 0.3, 0.45), Color(0.16, 0.16, 0.18), Color(0.2, 0.2, 0.24)],
+			fabrics = [&"stretch", &"stretch", &"stretch"],
+		},
+		"valdiri": {
+			detailed = true,
+			pieces = func(L: Dictionary) -> Array:
+				return [
+					# Heavyweight tank: wide scoop, to the waist.
+					{slot = Slot.MAIN, offset = 0.008, region = func(p, n):
+						return minf(_sleeveless(p, L, L.waist - 0.09, L.shoulder * 0.85), -_scoop(p, L, 0.13, 0.09))},
+					# Long boxing shorts to just above the knee, a contrast band at the hem.
+					{slot = Slot.ACCENT, offset = 0.011, trim_slot = Slot.TRIM,
+						region = func(p, n): return _legs(p, L.knee + 0.04, L.waist + 0.03),
+						trim = func(p, n): return p.y - (L.knee + 0.12)},
+				],
+			colors = [Color(0.78, 0.78, 0.8), Color(0.1, 0.1, 0.12), Color(0.12, 0.28, 0.5)],
+			alt_colors = [Color(0.1, 0.1, 0.12), Color(0.88, 0.67, 0.2), Color(0.55, 0.06, 0.1)],
+			fabrics = [&"stretch", &"cotton", &"cotton"],
+		},
 	}
 
 

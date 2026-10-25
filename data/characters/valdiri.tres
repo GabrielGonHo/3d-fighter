@@ -1,0 +1,81 @@
+[gd_resource type="Resource" script_class="CharacterData" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/characters/base/T_Superhero_Male_Light.png" id="1_aejly"]
+[ext_resource type="PackedScene" path="res://assets/characters/hair/Hair_Buzzed.gltf" id="2_473vd"]
+[ext_resource type="PackedScene" path="res://assets/characters/hair/Eyebrows_Regular.gltf" id="3_4n3sr"]
+[ext_resource type="PackedScene" path="res://assets/characters/base/Superhero_Male_FullBody.gltf" id="4_ntsa4"]
+[ext_resource type="Script" path="res://scripts/fighter/move_data.gd" id="5_28wa2"]
+[ext_resource type="Resource" path="res://data/moves/valdiri/jab.tres" id="6_mfy8s"]
+[ext_resource type="Resource" path="res://data/moves/valdiri/straight.tres" id="7_uvgcb"]
+[ext_resource type="Resource" path="res://data/moves/valdiri/crouch_jab.tres" id="8_utpon"]
+[ext_resource type="Resource" path="res://data/moves/valdiri/hook.tres" id="9_3ks2y"]
+[ext_resource type="Resource" path="res://data/moves/valdiri/uppercut.tres" id="10_3be13"]
+[ext_resource type="Resource" path="res://data/moves/valdiri/jump_jab.tres" id="11_id2dx"]
+[ext_resource type="Resource" path="res://data/moves/valdiri/jump_hammer.tres" id="12_2mx1l"]
+[ext_resource type="ArrayMesh" path="res://assets/characters/outfits/valdiri_body.res" id="13_4n3sr"]
+[ext_resource type="Script" path="res://scripts/character_data.gd" id="13_qacuy"]
+[ext_resource type="ArrayMesh" path="res://assets/characters/outfits/valdiri_outfit.res" id="14_ntsa4"]
+
+[resource]
+script = ExtResource("13_qacuy")
+id = &"valdiri"
+display_name = "Andrea Valdiri"
+archetype = "Boxer"
+description = "SF5 heavyweight. Slow hands, heavy damage: he waits, counters, and the uppercut ends the round. (Provisional model pending official artwork.)"
+select_order = 8
+model_scene = ExtResource("4_ntsa4")
+hair_scenes = Array[PackedScene]([ExtResource("2_473vd"), ExtResource("3_4n3sr")])
+hair_color = Color(0.05, 0.04, 0.04, 1)
+alt_body_albedo = ExtResource("1_aejly")
+alt_hair_color = Color(0.5, 0.33, 0.15, 1)
+outfit_mesh = ExtResource("14_ntsa4")
+outfit_body_mesh = ExtResource("13_4n3sr")
+outfit_colors = PackedColorArray(0.78, 0.78, 0.8, 1, 0.1, 0.1, 0.12, 1, 0.12, 0.28, 0.5, 1)
+outfit_fabrics = Array[StringName]([&"stretch", &"cotton", &"cotton"])
+alt_outfit_colors = PackedColorArray(0.1, 0.1, 0.12, 1, 0.88, 0.67, 0.2, 1, 0.55, 0.06, 0.1, 1)
+detailed_textures = true
+realistic_shading = true
+victory_animations = Array[StringName]([&"fight/victory_flex", &"fight/victory_fist_pump"])
+placeholder_color = Color(0.3, 0.55, 0.85, 1)
+intro_animation = &"fight/intro_shadowbox"
+intro_lines = PackedStringArray("Campeones se hacen, no se heredan.", "Cada golpe cuenta. El último decide.", "Defiende el cinturón: esta noche, conmigo.")
+win_quotes = PackedStringArray("El cinturón sigue en mi cintura.", "Resistir no es lo mismo que ganar.", "Siguiente retador.")
+rival_lines = {
+"divaza": ["La velocidad no gana cinturones.", "Tu ritmo es mi invitación."]
+}
+combo_trials = Array[Dictionary]([{
+&"corner": false,
+&"name": "Heavy One-Two",
+&"steps": PackedStringArray("LP", "HP"),
+&"tip": "Slow hands, heavy damage: the jab chains into the straight."
+}, {
+&"corner": false,
+&"name": "Hook and Pop",
+&"steps": PackedStringArray("6LP", "2HP"),
+&"tip": "The hook chains into the uppercut while they're up."
+}, {
+&"corner": false,
+&"name": "Body Work",
+&"steps": PackedStringArray("2LP", "2LP", "HP"),
+&"tip": "Crouching jabs chain into each other and into the straight."
+}, {
+&"corner": false,
+&"name": "Counter Jab",
+&"steps": PackedStringArray("2LP", "6LP", "2HP"),
+&"tip": "Body jab, hook over the top, then the uppercut."
+}, {
+&"corner": true,
+&"name": "Rope Uppercut",
+&"steps": PackedStringArray("LP", "HP", "WALL", "2HP"),
+&"tip": "Push them to the ropes, one-two, and the uppercut ends the round."
+}])
+max_health = 1100
+walk_speed = 1.9
+back_walk_speed = 1.5
+dash_speed = 5.2
+jump_velocity = 5.7
+weight = 1.2
+throw_damage = 130
+power_rating = 0.85
+speed_rating = 0.45
+moves = Array[ExtResource("5_28wa2")]([ExtResource("6_mfy8s"), ExtResource("7_uvgcb"), ExtResource("8_utpon"), ExtResource("9_3ks2y"), ExtResource("10_3be13"), ExtResource("11_id2dx"), ExtResource("12_2mx1l")])

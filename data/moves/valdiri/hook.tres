@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="MoveData" format=3]
+
+[ext_resource type="Script" path="res://scripts/fighter/move_data.gd" id="1_gskyi"]
+
+[resource]
+script = ExtResource("1_gskyi")
+name = "Hook"
+input = "6LP"
+animation = &"fight/rushing_hook"
+animation_impact = 0.28
+startup = 11
+recovery = 22
+damage = 75
+hitstun = 20
+blockstun = 14
+hitstop = 8
+knockback = Vector2(2.8, 0)
+lunge = 3.0
+hitbox_radius = 0.22
+hitbox_offset = Vector3(-0.15, 0.72, -0.95)
+cancel_into = Array[String](["2HP", "LP"])
+camera_intensity = 0.2

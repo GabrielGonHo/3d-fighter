@@ -42,6 +42,15 @@ const ROUTINES := {
 	&"brutus": [["idle", 2.2, &"ual2/Idle_FoldArms", 1.0], ["move", "214P"], ["idle", 1.6],
 		["move", "236P"], ["idle", 1.4], ["move", "6HP"], ["idle", 1.0],
 		["clip", &"fight/victory_flex", 2.6], ["idle", 1.6, &"ual2/Idle_FoldArms", 1.0]],
+	# Speed boxeur: bounces on the toes, the one-two, the hook in, the uppercut, then the pump.
+	&"divaza": [["idle", 0.5, &"fight/guard", 1.4], ["move", "LP"], ["move", "HP"],
+		["idle", 0.4, &"fight/guard", 1.4], ["move", "6LP"], ["move", "2HP"],
+		["idle", 0.5, &"fight/guard", 1.4], ["clip", &"fight/victory_fist_pump", 2.2],
+		["idle", 0.5, &"fight/guard", 1.4]],
+	# Heavyweight counterpuncher: waits it out, the jab, the hook over the top, the uppercut.
+	&"valdiri": [["idle", 1.0, &"fight/guard", 0.9], ["move", "LP"], ["idle", 0.8, &"fight/guard", 0.9],
+		["move", "6LP"], ["move", "2HP"], ["idle", 1.0, &"fight/guard", 0.9],
+		["clip", &"fight/victory_flex", 2.6], ["idle", 1.0, &"fight/guard", 0.9]],
 }
 const REST_ANGLE := 0.75 # radians: 3/4 view while idle
 const ATTACK_ANGLE := 1.35 # side-on while attacking

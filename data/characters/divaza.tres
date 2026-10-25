@@ -1,0 +1,82 @@
+[gd_resource type="Resource" script_class="CharacterData" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/characters/base/T_Superhero_Female_Dark_BaseColor.png" id="1_nvwac"]
+[ext_resource type="PackedScene" path="res://assets/characters/hair/Hair_Bob.tscn" id="2_7lqag"]
+[ext_resource type="PackedScene" path="res://assets/characters/hair/Eyebrows_Female.gltf" id="3_h1uui"]
+[ext_resource type="PackedScene" path="res://assets/characters/base/Superhero_Female_FullBody.gltf" id="4_i0vk5"]
+[ext_resource type="Script" path="res://scripts/fighter/move_data.gd" id="5_6h3fq"]
+[ext_resource type="Resource" path="res://data/moves/divaza/jab.tres" id="6_06ass"]
+[ext_resource type="Resource" path="res://data/moves/divaza/straight.tres" id="7_bantt"]
+[ext_resource type="Resource" path="res://data/moves/divaza/crouch_jab.tres" id="8_xsp5k"]
+[ext_resource type="Resource" path="res://data/moves/divaza/hook.tres" id="9_whwh7"]
+[ext_resource type="Resource" path="res://data/moves/divaza/uppercut.tres" id="10_rdx8i"]
+[ext_resource type="Resource" path="res://data/moves/divaza/jump_jab.tres" id="11_raaxg"]
+[ext_resource type="Resource" path="res://data/moves/divaza/jump_hammer.tres" id="12_kjw0o"]
+[ext_resource type="ArrayMesh" path="res://assets/characters/outfits/divaza_body.res" id="13_h1uui"]
+[ext_resource type="Script" path="res://scripts/character_data.gd" id="13_j066e"]
+[ext_resource type="ArrayMesh" path="res://assets/characters/outfits/divaza_outfit.res" id="14_i0vk5"]
+
+[resource]
+script = ExtResource("13_j066e")
+id = &"divaza"
+display_name = "La Divaza"
+archetype = "Boxer"
+description = "SF5 speed boxer. Rapid one-two-three strings, a long hook, and the uppercut to pop you up. (Provisional model pending official artwork.)"
+select_order = 7
+model_scene = ExtResource("4_i0vk5")
+hair_scenes = Array[PackedScene]([ExtResource("2_7lqag"), ExtResource("3_h1uui")])
+model_scale = 1.02
+hair_color = Color(0.15, 0.08, 0.05, 1)
+alt_body_albedo = ExtResource("1_nvwac")
+alt_hair_color = Color(0.45, 0.1, 0.15, 1)
+outfit_mesh = ExtResource("14_i0vk5")
+outfit_body_mesh = ExtResource("13_h1uui")
+outfit_colors = PackedColorArray(0.16, 0.16, 0.18, 1, 0.85, 0.3, 0.45, 1, 0.62, 0.12, 0.2, 1)
+outfit_fabrics = Array[StringName]([&"stretch", &"stretch", &"stretch"])
+alt_outfit_colors = PackedColorArray(0.85, 0.3, 0.45, 1, 0.16, 0.16, 0.18, 1, 0.2, 0.2, 0.24, 1)
+detailed_textures = true
+realistic_shading = true
+victory_animations = Array[StringName]([&"fight/victory_fist_pump", &"fight/victory_point"])
+placeholder_color = Color(0.85, 0.3, 0.45, 1)
+intro_animation = &"fight/intro_knuckles"
+intro_expression = &"grin"
+intro_lines = PackedStringArray("A la hora de pesar, la ventaja es mía.", "El ring es mi casa. Y yo no perdono.", "¡A que suene la campana!")
+win_quotes = PackedStringArray("¿Eso fue todo? Aún no ha empezado.", "Caes cuando yo lo decido.", "Buen round. Ahora el siguiente.")
+rival_lines = {
+"valdiri": ["El campeón y el retador: alguien va a caer.", "Tu jab es lento. Yo no lo soy."]
+}
+combo_trials = Array[Dictionary]([{
+&"corner": false,
+&"name": "One-Two-Three",
+&"steps": PackedStringArray("LP", "HP", "6LP"),
+&"tip": "Jab, straight, hook: the full one-two-three."
+}, {
+&"corner": false,
+&"name": "Body Uppercut",
+&"steps": PackedStringArray("2LP", "2HP"),
+&"tip": "Crouching jab, then cancel into the uppercut launcher."
+}, {
+&"corner": false,
+&"name": "Four-Punch Finisher",
+&"steps": PackedStringArray("LP", "HP", "6LP", "2HP"),
+&"tip": "One-two-three, then cancel the hook into the uppercut."
+}, {
+&"corner": false,
+&"name": "Rush and Pop",
+&"steps": PackedStringArray("6LP", "LP", "HP", "2HP"),
+&"tip": "The hook pulls them in, the one-two follows, uppercut to finish."
+}, {
+&"corner": true,
+&"name": "Rope Burn",
+&"steps": PackedStringArray("LP", "HP", "WALL", "2HP"),
+&"tip": "Corner them against the ropes: one-two, then the uppercut on the wall."
+}])
+walk_speed = 2.5
+back_walk_speed = 2.1
+dash_speed = 7.0
+jump_velocity = 6.4
+weight = 0.9
+throw_damage = 90
+power_rating = 0.35
+speed_rating = 0.9
+moves = Array[ExtResource("5_6h3fq")]([ExtResource("6_06ass"), ExtResource("7_bantt"), ExtResource("8_xsp5k"), ExtResource("9_whwh7"), ExtResource("10_rdx8i"), ExtResource("11_raaxg"), ExtResource("12_kjw0o")])
